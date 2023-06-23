@@ -11,6 +11,15 @@ catch (error) {
   }
 }
 
+try {
+  await fs.promises.rm('field-schemas.zip');
+}
+catch (error) {
+  if (error.code !== 'ENOENT') {
+    throw error;
+  }
+}
+
 await fs.promises.mkdir('field-schemas');
 
 for (const collection in data.paths) {
