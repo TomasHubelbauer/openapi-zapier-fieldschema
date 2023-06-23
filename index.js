@@ -62,14 +62,34 @@ for (const collection in data.paths) {
           }
           case 'uuid': {
             // Note that Zapier FieldSchema does not have a special type for UUIDs
-            field.type = 'text';
+            field.type = 'string';
             break;
           }
-          case 'timestamp with time zone': {
+          case 'date':
+          case 'timestamp with time zone':
+          case 'time without time zone': {
             field.type = 'datetime';
             break;
           }
+          case 'name':
+          case 'tsvector':
+          case 'character':
+          case 'character varying': {
+            field.type = 'string';
+            break;
+          }
           default: {
+            if (model.properties[property].format?.startsWith('public.geography')) {
+              field.type = 'string';
+              break;
+            }
+
+            if (model.properties[property].format?.startsWith('public.') && model.properties[property].enum) {
+              field.type = 'string';
+              field.choices = model.properties[property].enum;
+              break;
+            }
+
             throw new Error(`Unexpected string property format '${model.properties[property].format}' for ${property} in ${collection.slice('/'.length)}`);
           }
         }
@@ -80,12 +100,42 @@ for (const collection in data.paths) {
         field.type = 'boolean';
         break;
       }
+      case 'number': {
+        field.type = 'number';
+        break;
+      }
       case 'integer': {
         field.type = 'integer';
         break;
       }
+      case 'array': {
+        if (!model.properties[property].items?.type) {
+          throw new Error(`Unexpected undefined items type for ${property} in ${collection.slice('/'.length)}`);
+        }
+
+        switch (model.properties[property].items.type) {
+          case 'string': {
+            field.type = 'string';
+            break;
+          }
+          case 'integer': {
+            field.type = 'integer';
+            break;
+          }
+          default: {
+            throw new Error(`Unexpected items type '${model.properties[property].items.type}' for ${property} in ${collection.slice('/'.length)}`);
+          }
+        }
+
+        field.list = true;
+        break;
+      }
       case undefined: {
         switch (model.properties[property].format) {
+          case 'json': {
+            field.type = 'string';
+            break;
+          }
           case 'jsonb': {
             field.type = 'file';
             break;
